@@ -8,9 +8,9 @@
   </parent>
 
   <scm>
-    <connection>scm:git:ssh://github.com/Spirent/Spirent-iTest-Jenkins-Plugin.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/Spirent/Spirent-iTest-Jenkins-Plugin.git</developerConnection>
-    <url>https://github.com/Spirent/Spirent-iTest-Jenkins-Plugin</url>
+    <connection>scm:git:ssh://github.com/jenkinsci/itest-plugin.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/jenkinsci/itest-plugin.git</developerConnection>
+    <url>https://github.com/jenkinsci/itest-plugin</url>
     <tag>HEAD</tag>
   </scm>
 
