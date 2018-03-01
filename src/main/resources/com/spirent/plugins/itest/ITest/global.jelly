@@ -3,9 +3,6 @@
  xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson"  xmlns:f="/lib/form">
 
 	<f:section title="iTest">
-		<f:entry field="cliPath" title="iTestCLI path"> 
-	 		<f:textbox /> 
-	 	</f:entry> 
 	 	<f:entry field="rtPath" title="iTestRT path">
 			<f:textbox /> 
 		</f:entry> 

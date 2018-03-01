@@ -19,25 +19,10 @@
  * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.”
+ * SOFTWARE.
  */
 
 package com.spirent.plugins.itest;
-
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.BuildListener;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.Builder;
-import hudson.tasks.CommandInterpreter;
-import hudson.tasks.BatchFile;
-import hudson.tasks.Shell;
-import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
-import hudson.util.ListBoxModel.Option;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -54,11 +39,25 @@ import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 
-import net.sf.json.JSONObject;
-
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
+
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
+import hudson.tasks.BatchFile;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.Builder;
+import hudson.tasks.CommandInterpreter;
+import hudson.tasks.Shell;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import hudson.util.ListBoxModel.Option;
+import net.sf.json.JSONObject;
 
 /**
  * Parse test execution options for iTestCLI and iTestRT. 
@@ -108,7 +107,6 @@ public class ITest extends CommandInterpreter {
 	private transient String safeParamFile = ""; 
 
 	private transient String iTestCommand = ""; 
-	private transient String itestcli = ""; 
 	private transient String itestrt = ""; 
 	private transient ArrayList<String> testCaseNames; 
 
@@ -133,7 +131,6 @@ public class ITest extends CommandInterpreter {
 
 		ITest.Descriptor global = new ITest.Descriptor();  
 		testCaseNames = new ArrayList<String>(); 
-		itestcli = global.cliPath.isEmpty() ? "itestcli" : global.cliPath; 
 		itestrt = global.rtPath.isEmpty() ? "itestrt" : global.rtPath; 
 
 		processBuildWorkspace(build); 
@@ -406,9 +403,7 @@ public class ITest extends CommandInterpreter {
 		//by comma but not spaces 
 
 		String path = parseWorkspace(build); 
-		String generateITAR = itestcli + " --workspace " + path
-				+ " --exportPath " + path + " --exportProject " 
-				+ project.replaceAll("\\s+",""); 
+        String generateITAR = itestrt + " --itar " + path + " --exportItar";
 
 		CommandInterpreter runner = 
 				getCommandInterpreter(launcher, generateITAR); 
@@ -521,10 +516,6 @@ public class ITest extends CommandInterpreter {
 		/**
 		 * @since 1.0
 		 */
-		private String cliPath;
-		/**
-		 * @since 1.0
-		 */
 		private String rtPath; 
 		/**
 		 * @since 1.0
@@ -562,14 +553,6 @@ public class ITest extends CommandInterpreter {
 		 * @since 1.0
 		 */
 		private String dbPort;
-
-		/**
-		 * @return the cliPath
-		 */
-		public String getCliPath() {
-			return cliPath;
-		}
-
 		/**
 		 * @return the rtPath
 		 */
@@ -646,13 +629,6 @@ public class ITest extends CommandInterpreter {
 		 */
 		public String getDbPort() {
 			return dbPort;
-		}
-
-		/**
-		 * @param cliPath the cliPath to set
-		 */
-		public void setCliPath(String cliPath) {
-			this.cliPath = cliPath;
 		}
 
 		/**
@@ -733,12 +709,11 @@ public class ITest extends CommandInterpreter {
 			return true; 
 		}
 
-		public Descriptor(String cliPath, String rtPath, String lsIPAddress,
+        public Descriptor(String rtPath, String lsIPAddress,
 				String lsPort, String dbName, String dbType,
 				String dbUsername, String dbPassword,
 				String dbURI, String dbIPAddress, String dbPort) {
 			super();
-			this.cliPath = cliPath;
 			this.rtPath = rtPath;
 			this.lsIPAddress = lsIPAddress;
 			this.lsPort = lsPort;
@@ -755,7 +730,6 @@ public class ITest extends CommandInterpreter {
 		public boolean configure(StaplerRequest req, JSONObject formData) 
 				throws FormException {
 
-			cliPath = formData.getString("cliPath");
 			rtPath = formData.getString("rtPath"); 
 			lsIPAddress = formData.getString("lsIPAddress"); 
 			lsPort = formData.getString("lsPort"); 
@@ -859,17 +833,10 @@ public class ITest extends CommandInterpreter {
 			}
 		}
 
-		public FormValidation doTestExecutablePath(
-				@QueryParameter final String cliPath, 
-				@QueryParameter final String rtPath) { 
+        public FormValidation doTestExecutablePath(@QueryParameter
+        final String rtPath) {
 
 			//paths must end at executables, OK if paths are empty 
-			if ((!cliPath.isEmpty() 
-					&& (cliPath.indexOf("itestcli") == -1))){ 
-				return FormValidation.error("CLI path does not "
-						+ "end at executable"); 
-			}
-
 			if((!rtPath.isEmpty() && (rtPath.indexOf("itestrt") == -1))){ 
 				return FormValidation.error("RT path does not end"
 						+ " at executable"); 
