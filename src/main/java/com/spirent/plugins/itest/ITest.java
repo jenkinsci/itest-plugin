@@ -135,9 +135,8 @@ public class ITest extends CommandInterpreter {
 
 		processBuildWorkspace(build); 
 
-		if (!canGenerateITARFile(projects.replaceAll("\\s+",""), 
-				build, launcher, listener)) { 
-			return BUILD_FAILURE; 
+        if (!canGenerateITARFile(build, launcher, listener)) {
+            return BUILD_FAILURE;
 		}
 
 		String licenseServerURI = global.lsIPAddress; 
@@ -265,11 +264,6 @@ public class ITest extends CommandInterpreter {
 				test2.replaceAll("\\\\", "/")); 
 		String buildID = build.getId(); //to set up build folders 
 
-		//requires "resources" project ITAR 
-		if (!canGenerateITARFile("resources", build, launcher, listener)) { 
-			return BUILD_FAILURE; 
-		}
-
 		//create directory to store report (no harm if already exists) 
 		String createTestReportDir = "pushd . & cd " + safeWorkspacePath 
 				+ " & mkdir jenkins_test_reports_" + buildID + " & popd";
@@ -390,22 +384,17 @@ public class ITest extends CommandInterpreter {
 	/**
 	 * Generate iTAR files using iTestCLI. 
 	 * 
-	 * @param project
 	 * @param build
 	 * @param launcher
 	 * @param listener
 	 */
-	private boolean canGenerateITARFile(final String project, 
-			final AbstractBuild<?, ?> build, 
+    private boolean canGenerateITARFile(final AbstractBuild<?, ?> build, 
 			final Launcher launcher, final BuildListener listener) { 
-
-		//--exportProject accepts multiple projects separated 
-		//by comma but not spaces 
 
 		String path = parseWorkspace(build); 
         String generateITAR = itestrt + " --itar " + path + " --exportItar";
 
-		CommandInterpreter runner = 
+        CommandInterpreter runner = 
 				getCommandInterpreter(launcher, generateITAR); 
 
 		try { 

@@ -6,7 +6,7 @@
 	 	<f:entry field="rtPath" title="iTestRT path">
 			<f:textbox /> 
 		</f:entry> 
-		<f:validateButton title="${%Verify Paths}" progress="${%Testing...}" method="testExecutablePath" with="cliPath,rtPath" />
+		<f:validateButton title="${%Verify Paths}" progress="${%Testing...}" method="testExecutablePath" with="rtPath" />
 		<f:entry field="lsIPAddress" title="License Server">
 			<f:textbox /> 
 		</f:entry>
