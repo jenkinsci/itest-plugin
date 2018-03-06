@@ -25,28 +25,30 @@
 
 package com.spirent.plugins.itest;
 
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.Util;
-import hudson.model.BuildListener;
-import hudson.model.Result;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.Hudson;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.io.Reader;
+import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.kohsuke.stapler.DataBoundConstructor;
+
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.Util;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
+import hudson.model.Hudson;
+import hudson.model.Result;
 
 /**
  * Saves HTML reports for the project and publishes them.
@@ -71,7 +73,8 @@ public class ReportPublisher {
 
 	private static void writeFile(ArrayList<String> lines, File path) 
 			throws IOException {
-		BufferedWriter bw = new BufferedWriter(new FileWriter(path));
+        Writer w = new OutputStreamWriter(new FileOutputStream(path), "UTF-8");
+        BufferedWriter bw = new BufferedWriter(w);
 		for (int i = 0; i < lines.size(); i++) {
 			bw.write(lines.get(i));
 			bw.newLine();
@@ -88,7 +91,7 @@ public class ReportPublisher {
 			final InputStream is = 
 					this.getClass().getResourceAsStream(filePath);
 			try {
-				final Reader r = new InputStreamReader(is);
+                final Reader r = new InputStreamReader(is, "UTF-8");
 				try {
 					final BufferedReader br = new BufferedReader(r);
 					try {
@@ -169,6 +172,9 @@ public class ReportPublisher {
 			boolean keepAll = reportTarget.getKeepAll();
 			boolean allowMissing = reportTarget.getAllowMissing();
 
+            if (build.getWorkspace() == null)
+                return false;
+
 			FilePath archiveDir = 
 					build.getWorkspace().child(resolveParametersInString(build, 
 							listener, reportTarget.getReportDir()));
@@ -181,14 +187,14 @@ public class ReportPublisher {
 			// The index name might be a comma separated list 
 			String[] csvReports = resolveParametersInString(build, listener, 
 					reportTarget.getReportFiles()).split(",");
-			ArrayList<String> reports = new ArrayList<String>();
+            //			ArrayList<String> reports = new ArrayList<String>();
 			for (int j=0; j < csvReports.length; j++) { 
 				String report = csvReports[j];
 				report = report.trim();
 
 				// Ignore blank report names caused by trailing/double commas
 				if (report.equals("")) {continue;}
-				reports.add(report);
+                //				reports.add(report);
 
 				String tabNo = "tab" + (j + 1);
 				// Make the report name the filename without the extension.
@@ -208,7 +214,9 @@ public class ReportPublisher {
 			}
 
 			// Add the JS to change the link as appropriate.
-			String hudsonUrl = Hudson.getInstance().getRootUrl();
+            String hudsonUrl = null;
+            if (Hudson.getInstance() != null)
+                hudsonUrl = Hudson.getInstance().getRootUrl();
 			AbstractProject job = build.getProject();
 			reportLines.add("<script type=\"text/javascript\">"
 					+ "document.getElementById(\"hudson_link\").innerHTML=\""
@@ -247,7 +255,7 @@ public class ReportPublisher {
 						&& !allowMissing) {
 					listener.error("Directory '" + archiveDir + "' exists but "
 							+ "failed copying to '" + targetDir + "'.");
-					if (build.getResult().isBetterOrEqualTo(Result.UNSTABLE)) {
+                    if (build.getResult() != null && build.getResult().isBetterOrEqualTo(Result.UNSTABLE)) {
 						// If the build failed, don't complain that there was 
 						// no coverage.
 						// The build probably didn't even get to the point 

@@ -25,16 +25,6 @@
 
 package com.spirent.plugins.itest;
 
-import hudson.FilePath;
-import hudson.model.AbstractDescribableImpl;
-import hudson.model.Action;
-import hudson.model.ProminentProjectAction;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractItem;
-import hudson.model.AbstractProject;
-import hudson.model.DirectoryBrowserSupport;
-import hudson.model.Run;
-
 import java.io.File;
 import java.io.IOException;
 
@@ -43,6 +33,16 @@ import javax.servlet.ServletException;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+
+import hudson.FilePath;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractDescribableImpl;
+import hudson.model.AbstractItem;
+import hudson.model.AbstractProject;
+import hudson.model.Action;
+import hudson.model.DirectoryBrowserSupport;
+import hudson.model.ProminentProjectAction;
+import hudson.model.Run;
 
 /**
  * A representation of an HTML directory to archive and publish.
@@ -84,7 +84,7 @@ public class Report
     /**
      * The name of the file which will be used as the wrapper index.
      */
-    private final String wrapperName = "htmlpublisher-wrapper.html";
+    private static final String wrapperName = "htmlpublisher-wrapper.html";
 
     @DataBoundConstructor
     public Report(String reportName, String reportDir, 
