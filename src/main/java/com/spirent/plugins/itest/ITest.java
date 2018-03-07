@@ -35,6 +35,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Scanner;
 import java.util.regex.Pattern;
 
@@ -243,8 +244,8 @@ public class ITest extends CommandInterpreter {
 	private String expandEnvironmentVariables(String src){
 		String res = src;
 		Map<String, String> env = System.getenv();
-		for(String key : env.keySet()){
-            res = res.replace("\\$" + key, env.get(key));
+        for (Entry<String, String> iter : env.entrySet()) {
+            res = res.replace("\\$" + iter.getKey(), iter.getValue());
 		}
 		return res;
 	}

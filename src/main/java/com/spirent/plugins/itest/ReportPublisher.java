@@ -172,12 +172,15 @@ public class ReportPublisher {
 			boolean keepAll = reportTarget.getKeepAll();
 			boolean allowMissing = reportTarget.getAllowMissing();
 
-            if (build.getWorkspace() == null)
+            FilePath ws = build.getWorkspace();
+            if (ws == null)
                 return false;
 
-			FilePath archiveDir = 
-					build.getWorkspace().child(resolveParametersInString(build, 
-							listener, reportTarget.getReportDir()));
+            String reportDir = resolveParametersInString(build, listener, reportTarget.getReportDir());
+            if (reportDir == null)
+                return false;
+
+            FilePath archiveDir = ws.child(reportDir);
 			FilePath targetDir = reportTarget.getArchiveTarget(build);
 
 			String level = keepAll ? "BUILD" : "PROJECT"; 
@@ -215,8 +218,9 @@ public class ReportPublisher {
 
 			// Add the JS to change the link as appropriate.
             String hudsonUrl = null;
-            if (Hudson.getInstance() != null)
-                hudsonUrl = Hudson.getInstance().getRootUrl();
+            Hudson hubInstance = Hudson.getInstance();
+            if (hubInstance != null)
+                hudsonUrl = hubInstance.getRootUrl();
 			AbstractProject job = build.getProject();
 			reportLines.add("<script type=\"text/javascript\">"
 					+ "document.getElementById(\"hudson_link\").innerHTML=\""
@@ -255,7 +259,8 @@ public class ReportPublisher {
 						&& !allowMissing) {
 					listener.error("Directory '" + archiveDir + "' exists but "
 							+ "failed copying to '" + targetDir + "'.");
-                    if (build.getResult() != null && build.getResult().isBetterOrEqualTo(Result.UNSTABLE)) {
+                    Result buildResult = build.getResult();
+                    if (buildResult != null && buildResult.isBetterOrEqualTo(Result.UNSTABLE)) {
 						// If the build failed, don't complain that there was 
 						// no coverage.
 						// The build probably didn't even get to the point 
