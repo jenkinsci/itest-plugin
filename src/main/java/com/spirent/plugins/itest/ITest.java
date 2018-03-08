@@ -759,6 +759,49 @@ public class ITest extends CommandInterpreter {
 				return "postgresql"; 
 			}
 		}
+				
+		public FormValidation doTestExecutablePath(
+				@QueryParameter final String rtPath) 
+						throws IOException, ServletException {
+			//paths must end at executables, OK if paths are empty 
+			if((!rtPath.isEmpty() && (rtPath.indexOf("itestrt") == -1))){ 
+				return FormValidation.error("RT path does not end"
+						+ " at executable"); 
+			}
+			return FormValidation.ok("Success"); 
+		}
+				
+		public FormValidation doTestLicenseServerConnection(
+				@QueryParameter final String lsIPAddress, 
+				@QueryParameter final String lsPort) 
+						throws IOException, ServletException {
+			try {
+				//must specify license server 
+				if (lsIPAddress.isEmpty()) { 
+					return FormValidation.error("Must specify license server"); 
+				}
+
+				//test connection 
+				try {
+					Socket socket = new Socket();
+					Integer portNumber = lsPort.isEmpty() ? 
+							27000 : Integer.parseInt(lsPort); 
+
+					//InetSocketAddress resolves host name to IP if necessary
+					socket.connect(new InetSocketAddress(lsIPAddress, 
+							portNumber), 1000);
+					
+					//if it cannot connect, exception is thrown 
+					socket.close();
+					return FormValidation.ok("Connected to license server"); 
+				} catch (IOException ex) {
+					return FormValidation.error("Cannot reach license server"); 
+				} 
+			} catch (Exception e) {
+				e.printStackTrace();
+				return FormValidation.error("Client error");
+			}
+		}
 
 		public FormValidation doTestConnection(
 				@QueryParameter final String dbName, 
@@ -825,50 +868,6 @@ public class ITest extends CommandInterpreter {
 				}
 			}
 		}
-
-        public FormValidation doTestExecutablePath(@QueryParameter
-        final String rtPath) {
-
-			//paths must end at executables, OK if paths are empty 
-			if((!rtPath.isEmpty() && (rtPath.indexOf("itestrt") == -1))){ 
-				return FormValidation.error("RT path does not end"
-						+ " at executable"); 
-			}
-
-			return FormValidation.ok("Success"); 
-		}
-
-		public FormValidation doTestLicenseServerConnection(
-				@QueryParameter final String lsIPAddress,
-				@QueryParameter final String lsPort) 
-						throws IOException, ServletException {
-			try {
-				//must specify license server 
-				if (lsIPAddress.isEmpty()) { 
-					return FormValidation.error("Must specify license server"); 
-				}
-
-				//test connection 
-				try {
-					Socket socket = new Socket();
-					Integer portNumber = lsPort.isEmpty() ? 
-							27000 : Integer.parseInt(lsPort); 
-
-					//InetSocketAddress resolves host name to IP if necessary
-					socket.connect(new InetSocketAddress(lsIPAddress, 
-							portNumber), 1000);
-					
-					//if it cannot connect, exception is thrown 
-					socket.close();
-					return FormValidation.ok("Connected to license server"); 
-				} catch (IOException ex) {
-					return FormValidation.error("Cannot reach license server"); 
-				} 
-			} catch (Exception e) {
-				e.printStackTrace();
-				return FormValidation.error("Client error");
-			}
-	}
 
 	@Override
 	protected String getContents() {
