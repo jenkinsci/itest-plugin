@@ -11,11 +11,11 @@
     <connection>scm:git:ssh://github.com/jenkinsci/itest-plugin.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jenkinsci/itest-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/itest-plugin</url>
-    <tag>itest-1.1.1</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <artifactId>itest</artifactId>
-  <version>1.1.1</version>
+  <version>1.1.2-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <name>Spirent iTest Plugin</name>
   <description>Adds Spirent iTest support to Jenkins</description> 
