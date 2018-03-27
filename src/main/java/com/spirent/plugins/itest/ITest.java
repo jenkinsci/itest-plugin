@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Scanner;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
@@ -103,7 +104,10 @@ public class ITest extends CommandInterpreter {
 	public final String dbCustomTag; 
 
 	private final static boolean BUILD_FAILURE = false; 
-	private final static boolean BUILD_SUCCESS = true; 
+    private final static boolean BUILD_SUCCESS = true;
+    private static final String URI_PROJECT = "project://";
+    private static final String URI_FILE = "file:/";
+    private static final String VAR_WORKSPACE = "${WORKSPACE}";
 
 	private transient String safeTestbed = ""; 
 	private transient String safeParamFile = ""; 
@@ -112,17 +116,28 @@ public class ITest extends CommandInterpreter {
 	private transient String itestrt = ""; 
 	private transient ArrayList<String> testCaseNames; 
 
+    private final String PARAM_TESTBED = "--testbed";
+    private final String PARAM_PARAMETER = "--paramfile";
+    private final String PARAM_ITAR = " --itar";
+    private final String PARAM_EXPORTITAR = "--exportItar";
+    private final String PARAM_LICENSE_SERVER = "--licenseServer";
+    private final String PARAM_TEST = "--test";
+
+    private final String PATTERN_EXECUTION = "Execution status:\\s+(\\w+)";
+    private String SPACE_CHARACTER = "%%20";
+
+
 	@DataBoundConstructor
 	public ITest(String workspace, String projects,
 			String testcases, String testbed, String params, String paramFile,
 			boolean testReportRequired, String dbCustomTag) {
 		super(null);
-		this.workspace = workspace;
-		this.projects = projects;
-		this.testcases = testcases;
-		this.testbed = testbed;
+        this.workspace = workspace.trim();
+        this.projects = projects.trim();
+        this.testcases = testcases.trim();
+        this.testbed = testbed.trim();
 		this.params = params;
-		this.paramFile = paramFile;
+        this.paramFile = paramFile.trim();
 		this.testReportRequired = testReportRequired;
 		this.dbCustomTag = dbCustomTag;
 	}
@@ -131,42 +146,50 @@ public class ITest extends CommandInterpreter {
 	public boolean perform(final AbstractBuild<?, ?> build, 
 			final Launcher launcher, final BuildListener listener) {
 
+        if (launcher.isUnix()) {
+            SPACE_CHARACTER = "%20";
+        }
+
 		ITest.Descriptor global = new ITest.Descriptor();  
-		testCaseNames = new ArrayList<String>(); 
-		itestrt = global.rtPath.isEmpty() ? "itestrt" : global.rtPath; 
+        testCaseNames = new ArrayList<String>();
+        if (global.getRtPath().isEmpty()) {
+            this.itestrt = "itestrt";
+        } else if (global.getRtPath().contains(" ")) {
+            this.itestrt = String.format("\"%s\"", global.getRtPath());
+        } else {
+            itestrt = global.getRtPath();
+        }
 
 		processBuildWorkspace(build); 
 
-        if (!canGenerateITARFile(build, launcher, listener)) {
-            return BUILD_FAILURE;
-		}
+        //        if (!canGenerateITARFile(build, launcher, listener)) {
+        //            return BUILD_FAILURE;
+        //        }
 
 		String licenseServerURI = global.lsIPAddress; 
 		if(!global.lsPort.isEmpty()) { 
 			licenseServerURI += ":" + global.lsPort; 
 		}
 
-		iTestCommand = itestrt + " --licenseServer " + licenseServerURI 
-				+ " --itar " + parseWorkspace(build); 
+        iTestCommand = String.format("%s %s %s %s \"%s\"", this.itestrt, this.PARAM_LICENSE_SERVER, licenseServerURI, this.PARAM_ITAR, parseWorkspace(build));
 
 		addTestExecutionOptions(); 
 		parseTestCases(build); 
 
 		if (!testReportRequired) { 
-			if (!buildSucceeds(iTestCommand, build, launcher, listener) 
-					|| !testPassed(build)) { 
-				return BUILD_FAILURE; 
+            if (executeCommand(iTestCommand, build, launcher, listener) && testPassed(build)) {
+                return BUILD_SUCCESS;
 			}
 		} else { 
-			if (!canInitializeReport(build, launcher, listener) 
-					|| !buildSucceeds(iTestCommand, build, launcher, listener)
-					|| !canFinalizeReport(build, launcher, listener)
-					|| !testPassed(build)) { 
-				return BUILD_FAILURE; 
+            if (canInitializeReport(build, launcher, listener) //
+                    && executeCommand(iTestCommand, build, launcher, listener) //
+                    && canFinalizeReport(build, launcher, listener) //
+                    && testPassed(build)) {
+                return BUILD_SUCCESS;
 			}
 		}
 
-		return BUILD_SUCCESS; 
+        return BUILD_FAILURE;
 	}
 
 	/**
@@ -176,21 +199,31 @@ public class ITest extends CommandInterpreter {
 	 */
 	private void processBuildWorkspace(AbstractBuild<?, ?> build) {
 
-		String front = build.getWorkspace() + ""; 
+        String front = String.valueOf(build.getWorkspace());
 
-		if (testbed.toUpperCase().contains("WORKSPACE")) { 
-			String back = testbed.substring(testbed.indexOf("}") + 1); 
-			safeTestbed = front + back; 
-		} else { 
-			safeTestbed = testbed; 
-		}
+        if (!testbed.isEmpty()) {
+            if (testbed.startsWith(VAR_WORKSPACE)) {
+                String back = testbed.replace(VAR_WORKSPACE, "");
+                safeTestbed = front + back;
+            } else if (!testbed.startsWith(URI_PROJECT) && !testbed.startsWith(URI_FILE)) {
+                safeTestbed = String.format("%s%s", URI_FILE, this.testbed);
+            } else {
+                safeTestbed = testbed;
+            }
+            this.safeTestbed = this.safeTestbed.replace(" ", SPACE_CHARACTER);
+        }
 
-		if (paramFile.toUpperCase().contains("WORKSPACE")) { 
-			String back = paramFile.substring(paramFile.indexOf("}") + 1); 
-			safeParamFile = front + back; 
-		} else { 
-			safeParamFile = paramFile; 
-		}
+        if (!paramFile.isEmpty()) {
+            if (paramFile.startsWith(VAR_WORKSPACE)) {
+                String back = paramFile.replace(VAR_WORKSPACE, "");
+                safeParamFile = front + back;
+            } else if (!paramFile.startsWith(URI_PROJECT) && !paramFile.startsWith(URI_FILE)) {
+                safeParamFile = String.format("%s%s", URI_FILE, this.paramFile);
+            } else {
+                safeParamFile = paramFile;
+            }
+            this.safeParamFile = this.safeParamFile.replace(" ", SPACE_CHARACTER);
+        }
 	}
 
 	/**
@@ -201,19 +234,20 @@ public class ITest extends CommandInterpreter {
 	 * @param launcher
 	 * @param listener
 	 */
-	private boolean buildSucceeds(final String command, final AbstractBuild<?, ?> build, 
+	private boolean executeCommand(final String command, final AbstractBuild<?, ?> build, 
 			final Launcher launcher, final BuildListener listener) { 
 
 		String uniformPathSeparators = command.replaceAll("\\\\", "/"); 
 		CommandInterpreter runner = 
-				getCommandInterpreter(launcher, uniformPathSeparators); 
+                getCommandInterpreter(launcher, uniformPathSeparators);
 		try {
 			runner.perform(build, launcher, listener);
+            return true;
 		} catch (InterruptedException e) {
 			e.printStackTrace();
+            return false;
 		}
 
-		return consoleOutputIsValid(build); 
 	}
 
 	/**
@@ -222,22 +256,14 @@ public class ITest extends CommandInterpreter {
 	 */
 	private String parseWorkspace(final AbstractBuild<?, ?> build) { 
 
-		String front = build.getWorkspace() + ""; 
+        String front = String.valueOf(build.getWorkspace());
 
-		if (workspace.toUpperCase().contains("WORKSPACE")) { 
-			String back = workspace.substring(workspace.indexOf("}") + 1); 
-			return front + back; 
-		} 
-		
-		String regex = "[([A-Z]:\\\\)|/].*";
-		if (Pattern.matches(regex, workspace)) { 
-			return workspace; //full path was provided - Windows or *nix
-		} else if (workspace.isEmpty()) { 
-			//TODO these last two can be combined 
-			return build.getWorkspace() + ""; //relative path 
-		} else { 
-			//workspace is a relative path inside the Jenkins workspace 
-			return build.getWorkspace() + workspace; 
+        if (workspace.equals(VAR_WORKSPACE)) {
+            return front;
+        } else if (workspace.startsWith(VAR_WORKSPACE)) {
+            return String.format("%s%s", front, this.workspace.replace(VAR_WORKSPACE, ""));
+        } else {
+            return this.workspace;
 		}
 	}
 
@@ -270,7 +296,7 @@ public class ITest extends CommandInterpreter {
 		String createTestReportDir = "pushd . & cd " + safeWorkspacePath 
 				+ " & mkdir jenkins_test_reports_" + buildID + " & popd";
 
-		if (!buildSucceeds(createTestReportDir, build, launcher, listener)){ 
+		if (!executeCommand(createTestReportDir, build, launcher, listener)){ 
 			return BUILD_FAILURE; 
 		}
 
@@ -351,6 +377,7 @@ public class ITest extends CommandInterpreter {
 			} 
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
+            return false;
 		} finally { 
             if (scanner != null)
                 scanner.close();
@@ -367,22 +394,33 @@ public class ITest extends CommandInterpreter {
 	private boolean testPassed(final AbstractBuild<?, ?> build) {  
 		File test = build.getLogFile();
 		Scanner scanner = null;
+        Pattern p = Pattern.compile(PATTERN_EXECUTION);
+        Matcher m = null;
 		try {
             scanner = new Scanner(test, "UTF-8");
 			while (scanner.hasNextLine()) { 
-				String nextLine = scanner.nextLine(); 
-				//error messages generated by iTestCLI and iTestRT 
-				if (nextLine.contains("Execution status:  Fail")) { 
-					return false; 
-				}
-			} 
+                String nextLine = scanner.nextLine().trim();
+                if (nextLine.startsWith("Error") //
+                        || nextLine.contains("cannot find the path") //
+                        || nextLine.contains("valid directory") //
+                        || nextLine.contains("Failed to generate report")) {
+                    return false;
+                }
+                m = p.matcher(nextLine);
+                if (m.find()) {
+                    if (!m.group(1).equalsIgnoreCase("Pass")) {
+                        return false;
+                    }
+                }
+            }
+            return true;
 		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		} finally { 
             if (scanner != null)
                 scanner.close();
 		}
-		return true; 
+        return false;
 	}
 
 	/**
@@ -396,7 +434,7 @@ public class ITest extends CommandInterpreter {
 			final Launcher launcher, final BuildListener listener) { 
 
 		String path = parseWorkspace(build); 
-        String generateITAR = itestrt + " --itar " + path + " --exportItar";
+        String generateITAR = String.format("%s %s \"%s\" %s", this.itestrt, this.PARAM_ITAR, path, this.PARAM_EXPORTITAR);
 
         CommandInterpreter runner = 
 				getCommandInterpreter(launcher, generateITAR); 
@@ -415,26 +453,26 @@ public class ITest extends CommandInterpreter {
 	 */
 	private void parseTestCases(final AbstractBuild<?, ?> build) { 
 
-		String[] multipleTestCases = testcases.replaceAll("\\s+","").split(","); 
+        String[] multipleTestCases = testcases.split(",");
+        String front = String.valueOf(build.getWorkspace());
 		String back = null, temp = null; 
 
 		for (String testCase: multipleTestCases) {
-			if (testCase.toUpperCase().contains("WORKSPACE")) { 
-				System.out.println("contains workspace");
-				back = testCase.substring(testCase.indexOf("}") + 1);
-				if (back.indexOf("/") == 0 || back.indexOf("\\") == 0) { 
-					System.out.println("Slash was found at beginning");
-					temp = "project://" + back.substring(1); 
-				} else { 
-
-					temp = "project://" + back; 
-				}
-			} else { 
-				//TODO assumes that test case URI starts with project://
-				temp = testCase; 
+            if (testCase.trim().isEmpty()) {
+                continue;
+            }
+            testCase = testCase.trim();
+            if (testCase.startsWith(VAR_WORKSPACE)) {
+                back = testCase.replace(VAR_WORKSPACE, "");
+                temp = String.format("%s%s%s", URI_FILE, front, back);
+            } else if (!testCase.startsWith(URI_PROJECT) && testCase.startsWith(URI_FILE)) {
+                temp = String.format("%s%s", URI_FILE, testCase);
+            } else {
+                temp = testCase;
 			}
             testCaseNames.add(temp);
-			iTestCommand += " --test " + temp; 
+            temp = temp.replace(" ", SPACE_CHARACTER);
+            iTestCommand += String.format(" %s %s", this.PARAM_TEST, temp);
 		}
 	}
 
@@ -443,18 +481,18 @@ public class ITest extends CommandInterpreter {
 	 */
 	private void addTestExecutionOptions() { 
 		if (!testbed.isEmpty()) { 
-			iTestCommand += " --testbed file:/" + safeTestbed; 
+            iTestCommand += String.format(" %s \"%s\"", this.PARAM_TESTBED, this.safeTestbed);
 		}
 
 		if (!params.isEmpty()) { 
-			String[] multipleParams = params.replaceAll("\\s+","").split(","); 
+            String[] multipleParams = params.split(",");
 			for(String param : multipleParams) { 
-				iTestCommand += " --param " + param; 
+                iTestCommand += String.format(" --param \"%s\"", param.trim());
 			}
 		}
 
 		if (!paramFile.isEmpty()) { 
-			iTestCommand += " --paramfile file:/" + safeParamFile; 
+            iTestCommand += String.format(" %s \"%s\"", this.PARAM_PARAMETER, this.safeParamFile);
 		}
 	}
 
@@ -550,7 +588,7 @@ public class ITest extends CommandInterpreter {
 		 * @return the rtPath
 		 */
 		public String getRtPath() {
-			return rtPath;
+            return rtPath.trim();
 		}
 
 		/**
@@ -628,7 +666,7 @@ public class ITest extends CommandInterpreter {
 		 * @param rtPath the rtPath to set
 		 */
 		public void setRtPath(String rtPath) {
-			this.rtPath = rtPath;
+            this.rtPath = rtPath;
 		}
 
 		/**
@@ -723,7 +761,7 @@ public class ITest extends CommandInterpreter {
 		public boolean configure(StaplerRequest req, JSONObject formData) 
 				throws FormException {
 
-			rtPath = formData.getString("rtPath"); 
+            rtPath = formData.getString("rtPath");
 			lsIPAddress = formData.getString("lsIPAddress"); 
 			lsPort = formData.getString("lsPort"); 
 			dbName = formData.getString("dbName"); 
