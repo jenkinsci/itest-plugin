@@ -123,7 +123,7 @@ public class Report
     }
 
     public String getWrapperName() {
-        return this.wrapperName;
+        return wrapperName;
     }
 
     public FilePath getArchiveTarget(AbstractBuild build) {
@@ -175,7 +175,7 @@ public class Report
             		this, new FilePath(this.dir()), this.getTitle(), 
             		"/plugin/itest/images/24x24/Spirent_favicon.ico", false);
          // Hudson >= 1.312
-            dbs.setIndexFileName(Report.this.wrapperName); 
+            dbs.setIndexFileName(Report.wrapperName);
             dbs.generateResponse(req, rsp, this);
         }
 

@@ -4,9 +4,6 @@
 		<f:entry field="workspace" title="iTest Workspace">
 			<f:textbox />
 		</f:entry>
-		<f:entry field="projects" title="Name of project">
-			<f:textbox />
-		</f:entry>
 		<f:entry field="testcases" title="Test cases">  
 			<f:textbox />       
 		</f:entry>

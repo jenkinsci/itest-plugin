@@ -77,10 +77,6 @@ public class ITest extends CommandInterpreter {
 	/**
 	 * @since 1.0
 	 */
-	public final String projects; 
-	/**
-	 * @since 1.0
-	 */
 	public final String testcases; 
 	/**
 	 * @since 1.0
@@ -128,12 +124,10 @@ public class ITest extends CommandInterpreter {
 
 
 	@DataBoundConstructor
-	public ITest(String workspace, String projects,
-			String testcases, String testbed, String params, String paramFile,
+    public ITest(String workspace, String testcases, String testbed, String params, String paramFile,
 			boolean testReportRequired, String dbCustomTag) {
 		super(null);
         this.workspace = workspace.trim();
-        this.projects = projects.trim();
         this.testcases = testcases.trim();
         this.testbed = testbed.trim();
 		this.params = params;
@@ -323,22 +317,18 @@ public class ITest extends CommandInterpreter {
 	private boolean canFinalizeReport(final AbstractBuild<?, ?> build, 
 			final Launcher launcher, final BuildListener listener) { 
 
-		FilePath test = build.getWorkspace();
-		String test2 = "" + test; //convert FilePath to String 
-		String safeWorkspacePath = test2.replaceAll("\\\\", "/"); 
+        String safeWorkspacePath = String.valueOf(build.getWorkspace()).replaceAll("\\\\", "/");
 		String buildID = build.getId(); //to set up build folders 
-		String reportName = "Spirent iTest Report"; //name of display link 
-		String reportDir = safeWorkspacePath  
-				+ "/jenkins_test_reports_" + buildID; //one dir per build 
-		List<Report> list = 
-				new ArrayList<Report>(); 
+        String displayName = "Spirent iTest Report"; //name of display link 
+        String reportDir = safeWorkspacePath + "/jenkins_test_reports_" + buildID; //one dir per build 
+        List<Report> list = new ArrayList<Report>();
 
 		for (String s : testCaseNames) { 
-			String temp = s.substring(s.lastIndexOf("/") + 1, 
+			String testcaseName = s.substring(s.lastIndexOf("/") + 1, 
 					s.lastIndexOf(".")); 
-			String report = reportName + "-" + temp; 
+            String report = displayName + "-" + testcaseName;
 			list.add(new Report(report, reportDir, 
-					temp + ".html", true, true)); 
+					testcaseName + ".html", true, true)); 
 		}
 
 		ReportPublisher publisher = new ReportPublisher(list);

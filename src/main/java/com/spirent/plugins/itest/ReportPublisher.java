@@ -291,6 +291,7 @@ public class ReportPublisher {
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
+                return false;
 			}
 		}
 		return true;
