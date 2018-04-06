@@ -455,7 +455,7 @@ public class ITest extends CommandInterpreter {
             if (testCase.startsWith(VAR_WORKSPACE)) {
                 back = testCase.replace(VAR_WORKSPACE, "");
                 temp = String.format("%s%s%s", URI_FILE, front, back);
-            } else if (!testCase.startsWith(URI_PROJECT) && testCase.startsWith(URI_FILE)) {
+            } else if (!testCase.startsWith(URI_PROJECT) && !testCase.startsWith(URI_FILE)) {
                 temp = String.format("%s%s", URI_FILE, testCase);
             } else {
                 temp = testCase;
